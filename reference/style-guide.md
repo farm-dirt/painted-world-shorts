@@ -49,6 +49,22 @@ flowers, building, house`. Rules: far = sky + distant shapes, mid = scenery that
 ground line (it slides behind the near layer during parallax), near = opaque ground from y≈1430 down.
 Keep ≤ 8 big shapes per layer, haze between layers, one accent colour.
 
+## Mood dial — the picture follows the story's tone
+`"mood"` at the top of project.json sets the whole video; `"mood"` on a scene overrides it for that shot.
+| mood | Looks like | Use for |
+|---|---|---|
+| `normal` (default) | the golden painted look, untouched | wonder, funny, warm, everyday stories |
+| `tense` | warmth dimmed a little, slightly drained | worry, a problem building, "something is off" |
+| `eerie` | cold blue, colour drained, deeper vignette, thin low mist | mystery, folklore creepiness, death customs |
+| `dark` | night-blue multiply, strong vignette, heavy desaturation, mist | horror beats, death, tragedy, the scariest reveal |
+Fine-tune with an object: `"mood": {"base": "dark", "sat": 0.4, "mist": 0.2}` (keys: sat, bright, con,
+mul, tint, a, bloom, vig, mist). The centre of frame is dimmed less, so faces stay the brightest thing.
+Rules: pick the video's mood from the story (not from the topic's label); a dark story still opens on
+its strangest image, and may start `normal`/`tense` and sink to `dark` at the turn (contrast makes the
+dark beat hit harder); a happy ending can climb back to `normal`. `night` + `dark` stays readable;
+check a still. Music follows the same dial (normal → calm/celtic, eerie → dark_mystery_piano/dark_ambient,
+dark → horror_atmosphere/dark_fantasy_synth).
+
 ## Frame layout (1080 × 1920)
 - **Caption band** centre y = 400. Faces never inside y 330-470 while a caption shows (lint enforces).
 - **YouTube Shorts safe box**: keep faces, the key object, hook text and CTA inside x 48-888, y 180-1500.

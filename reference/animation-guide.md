@@ -44,7 +44,9 @@ show depth. Every shot gets a 4 % settle-in over 0.3 s. Variety rules:
 - Never two similar framings back to back. Mix: wide (zoom 1), medium (1.3-1.5), close-up (1.7-2.0), push-in, Dutch tilt (`roll` ±6°) on chaos.
 - **Lint must pass**: in close-ups, frame the face below the caption band (keep head top > y 520 on screen). If lint flags a scene, lower the camera `y` (smaller y = subject lower on screen) or reduce zoom/hop.
 - Use `shake` fx for impacts, `flash` for magic/lightning (max 2 per video).
-- A location keeps its light; to change the mood, change location (e.g. `village` → `night`) or use a custom loc.
+- A location keeps its light. The **mood dial** (`"mood"` in project.json for the whole video, or per scene)
+  changes how dark the picture feels on top of it — see style-guide "Mood dial". Change location
+  (`village` → `night`) for a change of time; change mood for a change of feeling.
 
 ## Transitions (scene `transition`)
 `cut` (default; most cuts should be cuts) · `dissolve` 0.4 s soft cross-dissolve (place/time change) ·

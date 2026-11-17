@@ -298,9 +298,54 @@
     v.addColorStop(0, 'rgba(40,24,40,0)'); v.addColorStop(1, 'rgba(40,24,40,0.75)'); x.fillStyle = v; x.fillRect(0, 0, W, H);
     return (POST.baked[key] = c);
   }
-  function postFX(ctx, t, grade, project) {
+  // ---------- mood dial: the story's tone decides how dark the picture is ----------
+  // project.mood (whole video) and scene.mood (one shot) = 'normal' | 'tense' | 'eerie' | 'dark'
+  // or an object like {"base": "dark", "sat": 0.4}. 'normal' = the golden painted look untouched.
+  // A mood drains colour, lowers light, cools the grade, deepens the vignette and adds low mist,
+  // but the centre of the frame stays lit so faces remain the brightest thing on screen.
+  const MOODS = {
+    normal: null,
+    tense: { sat: 0.86, bright: 0.95, con: 1.08, mul: '#ecd2bd', tint: '#c99a7a', a: 0.18, bloom: 0.8, vig: 0.4, mist: 0 },
+    eerie: { sat: 0.7, bright: 0.95, con: 1.12, mul: '#a6b6d8', tint: '#6f88b0', a: 0.2, bloom: 0.55, vig: 0.65, mist: 0.12 },
+    dark:  { sat: 0.55, bright: 0.95, con: 1.18, mul: '#6a78a6', tint: '#44587e', a: 0.22, bloom: 0.4, vig: 0.95, mist: 0.12 },
+  };
+  function moodOf(project, sc) {
+    const m = (sc && sc.mood) || project.mood || 'normal';
+    if (typeof m === 'string') return MOODS[m] || null;
+    const base = MOODS[m.base || 'dark'] || MOODS.dark; return { ...base, ...m };
+  }
+  function moodFX(ctx, t, m) {
+    if (!m) return;
+    if (!POST.tmp) POST.tmp = PT.mkCanvas(W, H);
+    const tc = POST.tmp.getContext('2d'); tc.clearRect(0, 0, W, H); tc.drawImage(ctx.canvas, 0, 0);
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.filter = `saturate(${m.sat}) brightness(${m.bright}) contrast(${m.con})`; ctx.drawImage(POST.tmp, 0, 0); ctx.filter = 'none';
+    if (m.mul) {                                          // dim the lights: multiply by a cool night colour,
+      const g = ctx.createRadialGradient(W / 2, H * 0.42, 60, W / 2, H * 0.45, H * 0.62);   // a little less at the centre (faces)
+      g.addColorStop(0, PT.tint(m.mul, 0, 0.55)); g.addColorStop(1, PT.tint(m.mul, 0, 1));
+      ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.globalCompositeOperation = 'source-over';
+    }
+    if (m.mist > 0) {                                     // slow drifting ground mist (pure function of t)
+      for (let i = 0; i < 4; i++) {
+        const y = 1250 + i * 170, x = W / 2 + Math.sin(t * 0.25 + i * 1.7) * 160;
+        const g = ctx.createRadialGradient(x, y, 40, x, y, 620);
+        g.addColorStop(0, `rgba(200,212,230,${m.mist * 0.55})`); g.addColorStop(1, 'rgba(200,212,230,0)');
+        ctx.save(); ctx.translate(x, y); ctx.scale(1.6, 0.35); ctx.translate(-x, -y); ctx.fillStyle = g; ctx.fillRect(x - 700, y - 700, 1400, 1400); ctx.restore();
+      }
+    }
+    ctx.restore();
+  }
+  function moodVignette(ctx, m) {
+    if (!m || !m.vig) return;
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+    const v = ctx.createRadialGradient(W / 2, H * 0.48, H * 0.22, W / 2, H * 0.5, H * 0.72);
+    v.addColorStop(0, 'rgba(14,16,30,0)'); v.addColorStop(1, `rgba(14,16,30,${0.7 * m.vig})`);
+    ctx.fillStyle = v; ctx.fillRect(0, 0, W, H); ctx.restore();
+  }
+  function postFX(ctx, t, grade, project, mood) {
     if (project.post === false) return;
     grade = grade || { tint: '#ffd0a0', a: 0.2, bloom: 0.3 };
+    if (mood) grade = { tint: mood.tint, a: mood.a, bloom: (grade.bloom ?? 0.3) * mood.bloom };
     if (!POST.small) POST.small = PT.mkCanvas(270, 480);
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
     const s = POST.small.getContext('2d'); s.filter = 'blur(8px) brightness(0.75) contrast(2.4)'; s.drawImage(ctx.canvas, 0, 0, 270, 480); s.filter = 'none';
@@ -385,7 +430,10 @@
       const drawB = (c) => drawScene(c, project, sc, t);
       TRANS[tr](ctx, drawA, drawB, u);
     } else drawScene(ctx, project, sc, t);
-    postFX(ctx, t, (PT.LOC[sc.location] || (project.custom && project.custom.loc && project.custom.loc[sc.location]) || {}).grade, project);
+    const mood = project.post === false ? null : moodOf(project, sc);
+    moodFX(ctx, t, mood);
+    postFX(ctx, t, (PT.LOC[sc.location] || (project.custom && project.custom.loc && project.custom.loc[sc.location]) || {}).grade, project, mood);
+    moodVignette(ctx, mood);
     drawCaption(ctx, project, t);
     if (project.cta) drawCTA(ctx, project.cta, t);
     ctx.restore();
@@ -415,5 +463,5 @@
     return out;
   }
 
-  Object.assign(PT, { lint, EASE, sampleKeys, renderFrame, sceneAt, PROPS, drawFX, envAt });
+  Object.assign(PT, { MOODS, lint, EASE, sampleKeys, renderFrame, sceneAt, PROPS, drawFX, envAt });
 })(typeof window !== 'undefined' ? window : globalThis);
