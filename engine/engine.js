@@ -199,7 +199,8 @@
       if (it.kind === 'actor') {
         const { st, pose } = it.r;
         if (st.visible === false) continue;
-        PT.shadow(ctx, st.x, st.y - (pose.hop || 0) * 0, st.h * PT.CAST[it.a.who].rel * 0.16);
+        const CC = PT.CAST[it.a.who] || (project.custom && project.custom.cast && project.custom.cast[it.a.who]) || (G.CUSTOM && G.CUSTOM.cast && G.CUSTOM.cast[it.a.who]) || {};
+        PT.shadow(ctx, st.x, st.y, st.h * (CC.rel || 1) * 0.16);
         const r = PT.drawCharacter(ctx, it.a.who, st.x, st.y, st.h, pose);
         handsOf[it.a.who] = r.hands;
         if (r.headBox) PT._heads.push({ who: it.a.who, top: r.headBox[0], bottom: r.headBox[1], x: r.headBox[2] });
