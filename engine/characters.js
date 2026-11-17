@@ -310,7 +310,9 @@
     const fx = side ? w * 0.17 : 0;
     const eyeY = h * 0.06, rx = w * 0.135 * F.eye, ry = h * 0.125 * F.eye;
     // [x, scaleX, outer direction]
-    const eyes = side ? [[fx + w * 0.17, 1, 1], [fx - w * 0.17, 0.62, -1]] : [[-w * 0.2, 1, -1], [w * 0.2, 1, 1]];
+    // three-quarter view: the eye on the facing side is foreshortened (narrow) and sits near the face edge;
+    // the eye nearer the viewer is full size and sits closer to the middle of the head.
+    const eyes = side ? [[fx + w * 0.2, 0.6, 1], [fx - w * 0.12, 1, -1]] : [[-w * 0.2, 1, -1], [w * 0.2, 1, 1]];
     for (const [ex, sc] of eyes) { // blush
       const cx = ex * 1.15, cy = eyeY + h * 0.17, r = w * 0.13 * sc;
       const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r); g.addColorStop(0, rgb(hex2rgb(C.blush), 0.6)); g.addColorStop(1, rgb(hex2rgb(C.blush), 0));
@@ -338,11 +340,11 @@
       ctx.beginPath(); ctx.moveTo(ex - out * bw, by + inner); ctx.quadraticCurveTo(ex, by - ry * 0.2 + (inner + outerDy) * 0.3, ex + out * bw, by + ry * 0.12 + outerDy); ctx.stroke();
     }
     // nose: soft shadow + highlight, no outline
-    const nx = fx + (side ? w * 0.06 : 0), ny = eyeY + h * 0.17;
+    const nx = fx + (side ? w * 0.1 : 0), ny = eyeY + h * 0.17;
     ctx.fillStyle = tint(C.skin, -0.35, 0.55); ellipse(ctx, nx - ls * w * 0.012, ny + h * 0.012, w * 0.05, h * 0.02); ctx.fill();
     ctx.fillStyle = 'rgba(255,240,225,0.65)'; ellipse(ctx, nx + ls * w * 0.012, ny - h * 0.012, w * 0.018, h * 0.012); ctx.fill();
     if (side) { ctx.strokeStyle = tint(C.skin, -0.3, 0.6); ctx.lineWidth = Math.max(1, w * 0.01); ctx.beginPath(); ctx.moveTo(nx + w * 0.03, ny - h * 0.08); ctx.quadraticCurveTo(nx + w * 0.07, ny, nx + w * 0.02, ny + h * 0.02); ctx.stroke(); }
-    const my = eyeY + h * (C.moustache ? 0.31 : 0.28), mx = fx + (side ? w * 0.04 : 0);
+    const my = eyeY + h * (C.moustache ? 0.31 : 0.28), mx = fx + (side ? w * 0.07 : 0);
     if (C.moustache) {
       const p = () => { ctx.beginPath(); ctx.moveTo(mx - w * 0.2, my + h * 0.01); ctx.quadraticCurveTo(mx - w * 0.12, my - h * 0.08, mx, my - h * 0.045); ctx.quadraticCurveTo(mx + w * 0.12, my - h * 0.08, mx + w * 0.2, my + h * 0.01); ctx.quadraticCurveTo(mx + w * 0.1, my - h * 0.015, mx, my - h * 0.005); ctx.quadraticCurveTo(mx - w * 0.1, my - h * 0.015, mx - w * 0.2, my + h * 0.01); ctx.closePath(); };
       shade(ctx, p, C.moustache, [mx - w * 0.2, my - h * 0.08, w * 0.4, h * 0.1], ls, { rim: 0.7, edge: 0.1 });

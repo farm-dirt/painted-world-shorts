@@ -12,7 +12,9 @@ Never imitate the reference film's characters (no ginger girl in a blue hoodie w
 - No outlines. Every shape gets form shading (warm light side → cool shadow side), ambient occlusion at
   the bottom and a golden rim on the sun side. The location decides the light.
 - **One signature colour block** per character (the costume), never the location's own colour.
-- `view:'side'` is a **three-quarter view** (both eyes, the far one narrower).
+- `view:'side'` is a **three-quarter view**: both eyes show; the eye on the side the character faces is the narrow
+  (foreshortened) one near the face edge, the eye nearer the viewer is full size toward the middle; nose and mouth shift
+  toward the facing side. Check a side-view close-up still whenever a new character is added.
 
 ## Cast (`CAST` ids)
 | id | Name | Role / personality | Look |
