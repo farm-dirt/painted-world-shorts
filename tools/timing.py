@@ -1,3 +1,4 @@
+import math
 #!/usr/bin/env python3
 """Voice-over analysis -> timing.json (the master clock for the whole animation).
 
@@ -94,9 +95,37 @@ def main():
         K = len(sents)
         # inner pauses (not leading/trailing silence), longest K-1 become sentence breaks
         inner = [p for p in pauses if p[0] > speech[0][0] + 0.05 and p[1] < speech[-1][1] - 0.05] if speech else []
-        brk = sorted(sorted(inner, key=lambda p: p[1] - p[0], reverse=True)[:max(0, K - 1)])
-        if len(brk) < K - 1:  # not enough pauses: fall back to syllable-proportional breaks
-            brk = None
+        # choose the K-1 break pauses that best fit each sentence's length (syllables), favouring longer pauses.
+        # (Taking simply the K-1 longest pauses breaks when the narrator also pauses on commas.)
+        brk = None
+        if len(inner) >= K - 1 and K > 1:
+            syl = [max(1, sum(syllables(w) for w in s.split())) for s in sents]
+            def talk(a_, b_):
+                return max(0.05, sum(max(0, min(e_, b_) - max(s_, a_)) for s_, e_ in speech))
+            T0, T1 = speech[0][0], speech[-1][1]
+            rate = talk(T0, T1) / sum(syl)
+            M, INF = len(inner), float('inf')
+            # D[k][j] = best cost with break k (0-based) placed at pause j
+            D = [[INF] * M for _ in range(K - 1)]; B = [[-1] * M for _ in range(K - 1)]
+            def cost(k, a_, b_, pl):
+                return math.log(talk(a_, b_) / (syl[k] * rate)) ** 2 - 0.35 * min(pl, 0.8)
+            for j in range(M):
+                D[0][j] = cost(0, T0, inner[j][0], inner[j][1] - inner[j][0])
+            for k in range(1, K - 1):
+                for j in range(k, M):
+                    for i in range(k - 1, j):
+                        if D[k - 1][i] == INF: continue
+                        c = D[k - 1][i] + cost(k, inner[i][1], inner[j][0], inner[j][1] - inner[j][0])
+                        if c < D[k][j]: D[k][j], B[k][j] = c, i
+            best, bj = INF, -1
+            for j in range(K - 2, M):
+                if D[K - 2][j] == INF: continue
+                c = D[K - 2][j] + math.log(talk(inner[j][1], T1) / (syl[K - 1] * rate)) ** 2
+                if c < best: best, bj = c, j
+            if bj >= 0:
+                idx, k = [], K - 2
+                while k >= 0: idx.append(bj); bj = B[k][bj]; k -= 1
+                brk = [inner[i] for i in reversed(idx)]
         t0, t1 = speech[0][0], speech[-1][1]
         edges = [t0]
         if brk:
