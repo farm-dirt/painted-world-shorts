@@ -81,7 +81,7 @@
     const seed = idx * 7.31 + (actor.who.length * 3.1);
     const st = sampleKeys(actor.keys, lt, Object.assign({ x: 540, y: GROUND + 60, h: 820 }, actor));
     const pose = {};
-    for (const k of ['facing', 'view', 'lean', 'headTilt', 'look', 'face', 'squash', 'armL', 'armR', 'hop', 'legSpread']) if (k in st) pose[k] = st[k];
+    for (const k of ['rot', 'facing', 'view', 'lean', 'headTilt', 'look', 'face', 'squash', 'armL', 'armR', 'hop', 'legSpread']) if (k in st) pose[k] = st[k];
     // walking: leg phase from distance travelled (feet never skate)
     if (st.walk) {
       const x0 = (actor.keys && actor.keys[0] && actor.keys[0].x) ?? st.x;
@@ -200,10 +200,13 @@
         const { st, pose } = it.r;
         if (st.visible === false) continue;
         const CC = PT.CAST[it.a.who] || (project.custom && project.custom.cast && project.custom.cast[it.a.who]) || (G.CUSTOM && G.CUSTOM.cast && G.CUSTOM.cast[it.a.who]) || {};
-        PT.shadow(ctx, st.x, st.y, st.h * (CC.rel || 1) * 0.16);
+        const rot = st.rot || 0;                     // rot (radians) tips the whole body around the feet (lying down = ±1.57)
+        if (!rot) PT.shadow(ctx, st.x, st.y, st.h * (CC.rel || 1) * 0.16);
+        if (rot) { ctx.save(); ctx.translate(st.x, st.y); ctx.rotate(rot); ctx.translate(-st.x, -st.y); }
         const r = PT.drawCharacter(ctx, it.a.who, st.x, st.y, st.h, pose);
+        if (rot) ctx.restore();
         handsOf[it.a.who] = r.hands;
-        if (r.headBox) PT._heads.push({ who: it.a.who, top: r.headBox[0], bottom: r.headBox[1], x: r.headBox[2] });
+        if (r.headBox && !rot) PT._heads.push({ who: it.a.who, top: r.headBox[0], bottom: r.headBox[1], x: r.headBox[2] });
       } else {
         const st = it.st; if (st.visible === false) continue;
         const fn = PROPS[it.p.type] || (project.custom && project.custom.props && project.custom.props[it.p.type]);

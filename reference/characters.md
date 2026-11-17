@@ -51,4 +51,4 @@ neutral · happy · grin · shock · angry · worried · sad (tears) · smug · 
 `armL`/`armR` = `[shoulder, elbow]` radians (0 = hanging). relaxed `[0.2,0.15]` · hands on hips `[0.9,-1.9]` ·
 shrug `[0.5,1.7]` · arms up `[2.4,0.3]` · reach forward (3/4 view, near arm) armR `[1.4,0.3]` ·
 hold item up armR `[2.6,0.2]` · run swing armL `[-0.9,0.4]` armR `[1.0,0.6]` · hands to face `[1.2,1.4]`.
-Other: `view` front/side, `facing` 1/-1, `lean`, `headTilt`, `look [x,y]`, `squash`, `hop`, `walk`.
+Other: `rot` (radians, tips the whole body around the feet; lying down = ±1.57), `view` front/side, `facing` 1/-1, `lean`, `headTilt`, `look [x,y]`, `squash`, `hop`, `walk`.
