@@ -33,7 +33,7 @@ save `{kind, text, title, at}` to the published page's db at `feedback/latest` (
 copying the text to the clipboard. The user then types "check" and Claude reads that document.
 
 ## Render & export
-- Default: 1080×1920, 30 fps, H.264 High, CRF 16 medium, yuv420p, GOP 30, `+faststart`, AAC 192k.
+- Default: 1080×1920, 30 fps, H.264 High, CRF 16 veryfast (same quality as medium, measured 17 Nov 2026: ~40% faster), yuv420p, GOP 30, `+faststart`, AAC 192k.
 - 30 fps (smooth camera moves and parallax). 24 fps only if the user asks for a filmic feel.
 - Speed: ≈ 5-7 s render per 1 s of video on 2 CPUs (a 45 s short ≈ 4-5 min). Tell the user before a full render. Each location is
   painted once per worker (0.1-2.6 s), then cached; post FX are pre-baked per location.

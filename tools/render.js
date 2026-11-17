@@ -27,7 +27,7 @@ async function worker(k, a, b, browser) {
   await page.evaluate(() => window.READY);
   const seg = path.join(tmp, `seg_${String(k).padStart(2, '0')}.mp4`);
   const ff = spawn('ffmpeg', ['-v', 'error', '-y', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'mjpeg', '-i', '-',
-    '-c:v', 'libx264', '-preset', 'medium', '-crf', '16', '-pix_fmt', 'yuv420p', '-g', String(FPS), '-r', String(FPS), seg],
+    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '16', '-pix_fmt', 'yuv420p', '-g', String(FPS), '-r', String(FPS), seg],
     { stdio: ['pipe', 'inherit', 'inherit'] });
   const BATCH = 6;
   for (let f = a; f < b; f += BATCH) {
