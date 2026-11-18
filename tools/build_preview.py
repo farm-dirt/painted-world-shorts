@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """Assemble PROJECT_DIR/preview/ : a self-contained page that plays the REAL animation.
 
-usage: python3 build_preview.py PROJECT_DIR
+usage: python3 build_preview.py PROJECT_DIR [--video RENDER.mp4]
+--video: attach the engine's own render (render.js output) for smooth playback in the browser
+         (heavy dark/eerie shots can't be drawn live at 30 fps on every computer). It is re-encoded
+         small (720x1280) into preview/video/preview.mp4. Pausing, scrubbing and frame-stepping still
+         draw the live engine. Only attach a render made AFTER the last change, or it shows old shots.
 Copies the engine, writes preview/data.js (project + timing merged), copies audio/mix.mp3.
 The same folder is what render.js loads (with ?render=1), so preview == final.
 Works opened straight from disk (file://) and when published as an Artifact.
@@ -14,6 +18,7 @@ ENGINE = os.path.join(ROOT, 'engine')
 
 def main():
     P = sys.argv[1]
+    video = sys.argv[sys.argv.index('--video') + 1] if '--video' in sys.argv else None
     pf = os.path.join(P, 'project-files')
     proj = json.load(open(os.path.join(pf, 'project.json')))
     tim = json.load(open(os.path.join(pf, 'timing.json')))
@@ -39,6 +44,16 @@ def main():
     if os.path.exists(mp3):
         shutil.copy(mp3, os.path.join(out, 'audio', 'mix.mp3'))
         proj['audio'] = 'audio/mix.mp3'
+    vdir = os.path.join(out, 'video')
+    if video:
+        import subprocess
+        os.makedirs(vdir, exist_ok=True)
+        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', video, '-vf', 'scale=720:1280', '-c:v', 'libx264', '-preset', 'veryfast',
+                        '-crf', '25', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart',
+                        os.path.join(vdir, 'preview.mp4')], check=True)
+        proj['video'] = 'video/preview.mp4'
+    elif os.path.isdir(vdir):
+        shutil.rmtree(vdir)  # an old render would show stale shots
     # timing: keep what the engine/preview needs
     proj['timing'] = {k: tim[k] for k in ['dur', 'envFps', 'env', 'speech', 'pauses', 'sentences'] if k in tim}
     if 'captions' not in proj and 'captions' in tim:

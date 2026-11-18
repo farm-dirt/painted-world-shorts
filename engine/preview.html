@@ -91,6 +91,7 @@ body:not(.render) .stage{width:min(100%,calc((100dvh - 310px) * 9 / 16))}
   <section class="player">
     <div class="stage" id="stage">
       <canvas id="cv" width="1080" height="1920"></canvas>
+      <video id="vid" playsinline preload="auto" style="position:absolute;inset:0;width:100%;height:100%;display:none;object-fit:contain;background:#000"></video>
       <div class="safe" id="safe">
         <div class="b" style="left:0;right:0;top:0;height:7%"><span style="left:6px;top:4px">top UI</span></div>
         <div class="b" style="left:0;right:0;bottom:0;height:20%"><span style="left:6px;top:4px">title / channel / description</span></div>
@@ -145,6 +146,9 @@ if (isRender) { /* nothing else */ } else {
 
 const $ = (id) => document.getElementById(id);
 const au = $('au'); if (P.audio) au.src = P.audio;
+// smooth mode: when the engine's own render is attached (P.video), PLAY that video; pause/scrub/frame-step draw the live engine
+const vid = $('vid'), HASV = !!P.video; if (HASV) vid.src = P.video;
+const showVid = (on) => { vid.style.display = on ? 'block' : 'none'; };
 $('title').textContent = P.title || 'Preview';
 $('meta').textContent = `${DUR.toFixed(2)} s · ${NF} frames · ${FPS} fps · 1080×1920 · ${P.scenes.length} scenes`;
 const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
@@ -155,22 +159,26 @@ let t = 0, playing = false, loopScene = false, clockStart = 0, clockT0 = 0, rate
 const now = () => performance.now() / 1000;
 const curTime = () => {
   if (!playing) return t;
-  if (P.audio && !au.paused && au.readyState >= 2) return au.currentTime;
+  if (HASV && !vid.paused && vid.readyState >= 2) return vid.currentTime;
+  if (!HASV && P.audio && !au.paused && au.readyState >= 2) return au.currentTime;
   return clockT0 + (now() - clockStart) * rate;
 };
-function draw() {
+function draw(uiOnly) {
   const f = Math.min(NF - 1, Math.floor(t * FPS + 1e-6));
-  PT.renderFrame(ctx, P, f / FPS);
+  if (!uiOnly) PT.renderFrame(ctx, P, f / FPS);
   $('time').textContent = `${t.toFixed(2)} s · f ${f}`;
   $('head').style.left = (t / DUR * 100) + '%';
   const si = PT.sceneAt(P, t);
   document.querySelectorAll('.scene').forEach((el, i) => el.classList.toggle('cur', i === si));
 }
-function seek(nt) { t = Math.max(0, Math.min(DUR - 1e-3, nt)); if (P.audio) au.currentTime = t; clockT0 = t; clockStart = now(); draw(); }
+function seek(nt) { t = Math.max(0, Math.min(DUR - 1e-3, nt)); if (HASV) vid.currentTime = t; else if (P.audio) au.currentTime = t; clockT0 = t; clockStart = now(); draw(HASV && playing); }
 function setPlay(p) {
   playing = p; $('play').textContent = p ? '❚❚ Pause' : '▶ Play'; $('bigplay').style.display = p ? 'none' : 'flex';
   clockT0 = t; clockStart = now();
-  if (P.audio) { if (p) { au.currentTime = t; au.playbackRate = rate; au.play().catch(() => {}); } else au.pause(); }
+  if (HASV) {
+    if (p) { vid.currentTime = t; vid.playbackRate = rate; showVid(true); vid.play().catch(() => {}); }
+    else { vid.pause(); t = Math.max(0, Math.min(DUR - 1e-3, vid.currentTime || t)); showVid(false); draw(); }
+  } else if (P.audio) { if (p) { au.currentTime = t; au.playbackRate = rate; au.play().catch(() => {}); } else au.pause(); }
   if (p) requestAnimationFrame(loop);
 }
 function loop() {
@@ -178,8 +186,9 @@ function loop() {
   t = curTime();
   const si = PT.sceneAt(P, t), sc = P.scenes[si];
   if (loopScene && (t >= sc.end - 1e-3 || t < sc.start)) { seek(curLoop.start); }
-  if (t >= DUR - 0.02 || (P.audio && au.ended)) { seek(0); if (P.audio) { au.currentTime = 0; au.play().catch(() => {}); } } // loop like a Short
-  draw(); requestAnimationFrame(loop);
+  if (HASV) { if (t >= DUR - 0.04 || vid.ended) { seek(0); vid.play().catch(() => {}); } }
+  else if (t >= DUR - 0.02 || (P.audio && au.ended)) { seek(0); if (P.audio) { au.currentTime = 0; au.play().catch(() => {}); } } // loop like a Short
+  draw(HASV); requestAnimationFrame(loop);
 }
 let curLoop = P.scenes[0];
 const GET_T = () => (playing ? curTime() : t), SEEK = (x) => seek(x), SCENE_AT = (x) => PT.sceneAt(P, x);
@@ -189,7 +198,7 @@ $('bigplay').onclick = () => setPlay(true);
 $('prevf').onclick = () => { setPlay(false); seek(t - 1 / FPS); };
 $('nextf').onclick = () => { setPlay(false); seek(t + 1 / FPS); };
 $('loop').onclick = () => { loopScene = !loopScene; $('loop').classList.toggle('on', loopScene); curLoop = P.scenes[PT.sceneAt(P, t)]; };
-$('speed').onchange = (e) => { rate = +e.target.value; au.playbackRate = rate; clockT0 = t; clockStart = now(); };
+$('speed').onchange = (e) => { rate = +e.target.value; au.playbackRate = rate; vid.playbackRate = rate; clockT0 = t; clockStart = now(); };
 $('safeb').onclick = () => { $('safe').classList.toggle('on'); $('safeb').classList.toggle('on'); };
 $('capb').onclick = () => { P.showCaptions = P.showCaptions === false; $('capb').classList.toggle('on', P.showCaptions !== false); draw(); };
 document.addEventListener('keydown', (e) => {
