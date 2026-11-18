@@ -12,8 +12,7 @@ LEVELS (user preference: background must never fight the voice):
   music  = 8 % of the voice level during speech (-22 dB), rises to 14 % in long pauses
   sfx    = peaks at 35 % of the voice peak
 Override in project.json: "mix": {"music": 0.08, "musicPause": 0.14, "sfx": 0.35}
-Recorded music: "music": {"track": "greek_folk", "start": 0, "stops": [[a, b]]} (files in assets/music/)
-  Switch at the story's turn: add "then": [{"t": 27.4, "track": "horror_atmosphere", "xfade": 1.0}]
+Recorded music: "music": {"track": "greek_folk", "start": 0, "stops": [[a, b]], "switch": [{"t": 35, "track": "epic_action", "start": 0, "xfade": 0.8}]} (files in assets/music/; "switch" changes track at t with a crossfade)
 """
 import json, os, subprocess, sys, re
 import numpy as np
@@ -219,24 +218,20 @@ def main():
         if mcfg.get('track'):
             if mcfg['track'] not in music_tracks():
                 sys.exit('!! unknown music track %s -> available: %s' % (mcfg['track'], ', '.join(music_tracks())))
-            # "then": [{"t": 27.4, "track": "horror_atmosphere", "start": 0, "xfade": 1.0}] switches the bed at the story's turn
-            segs = [(0.0, mcfg['track'], mcfg.get('start', 0.0), 1.0)] + [(c['t'], c['track'], c.get('start', 0.0), c.get('xfade', 1.0)) for c in mcfg.get('then', [])]
-            for _, nm, _, _ in segs:
-                if nm not in music_tracks(): sys.exit('!! unknown music track %s' % nm)
-            if len(segs) == 1:
-                m = music_track(mcfg['track'], dur, mcfg.get('start', 0.0), mcfg.get('stops', []))[:len(voice)]
-            else:
-                N = len(voice); m = np.zeros(N); tt = np.arange(N) / SR
-                for i, (t0, nm, st, xf) in enumerate(segs):
-                    x = music_track(nm, dur, st, [])[:N]; x = x / rms(x)
-                    y = np.zeros(N); i0 = int(t0 * SR); y[i0:] = x[:N - i0]
-                    w = np.ones(N) if i == 0 else np.clip((tt - t0) / xf, 0, 1)
-                    if i + 1 < len(segs): t1, xf1 = segs[i + 1][0], segs[i + 1][3]; w = w * np.clip(1 - (tt - t1) / xf1, 0, 1)
-                    m += y * w
-                for a, b in mcfg.get('stops', []):
-                    i0, i1 = int(a * SR), int(b * SR); m[i0:i1] = 0
-                    f2 = min(int(0.15 * SR), len(m) - i1)
-                    if f2 > 0: m[i1:i1 + f2] *= np.linspace(0, 1, f2)
+            m = music_track(mcfg['track'], dur, mcfg.get('start', 0.0), mcfg.get('stops', []))[:len(voice)]
+            m = m / rms(m)
+            # optional track switches: "switch": [{"t": 35.0, "track": "epic_action", "start": 0, "xfade": 0.8}]
+            for sw in sorted(mcfg.get('switch', []), key=lambda d: d['t']):
+                if sw['track'] not in music_tracks():
+                    sys.exit('!! unknown music track %s' % sw['track'])
+                i0 = int(sw['t'] * SR); xf = int(sw.get('xfade', 0.8) * SR)
+                stops2 = [[a - sw['t'], b - sw['t']] for a, b in mcfg.get('stops', []) if b > sw['t']]
+                m2 = music_track(sw['track'], dur - sw['t'] + 0.01, sw.get('start', 0.0), [[max(0, a), b] for a, b in stops2])
+                m2 = m2 / rms(m2)
+                seg = np.zeros(len(m)); seg[i0:i0 + len(m2)] = m2[:max(0, len(m) - i0)]
+                w = np.zeros(len(m)); w[i0:] = 1.0
+                ramp = np.linspace(0, 1, xf); i1 = min(len(m), i0 + xf); w[i0:i1] = ramp[:i1 - i0]
+                m = m * (1 - w) + seg * w
         else:
             m = music(dur, mcfg.get('bpm', 112), mcfg.get('key', 0), mcfg.get('stops', []))[:len(voice)]
         if len(m) < len(voice): m = np.concatenate([m, np.zeros(len(voice) - len(m))])
